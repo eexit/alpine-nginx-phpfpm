@@ -1,32 +1,35 @@
 FROM alpine:edge
-MAINTAINER Josh Sandlin <josh@thenullbyte.org>
+MAINTAINER Joris Berthelot <admin@eexit.net>
 
 RUN apk --update add \
   nginx \
   php-fpm \
-  php-pdo \
   php-json \
   php-openssl \
-  php-mysql \
-  php-pdo_mysql \
   php-mcrypt \
-  php-sqlite3 \
-  php-pdo_sqlite \
   php-ctype \
+  php-iconv \
+  php-posix \
+  php-curl \
+  php-xml \
   php-zlib \
   supervisor
 
-RUN mkdir -p /etc/nginx
-RUN mkdir -p /var/run/php-fpm
-RUN mkdir -p /var/log/supervisor
+# PHP-FPM logs destination
+RUN mkdir /var/log/php-fpm
 
-RUN rm /etc/nginx/nginx.conf
-ADD nginx.conf /etc/nginx/nginx.conf
+# Avoid FastCGI to guess the requested file
+RUN sed -ie 's/;cgi.fix_pathinfo=1/cgi.fix_pathinfo=0/g' /etc/php/php.ini
 
-VOLUME ["/var/www", "/etc/nginx/sites-enabled"]
+# Do not expose PHP version!
+RUN sed -ie 's/expose_php = On/expose_php = Off/g' /etc/php/php.ini
 
-ADD nginx-supervisor.ini /etc/supervisor.d/nginx-supervisor.ini
+COPY conf/nginx-supervisor.ini /etc/supervisor.d/nginx-supervisor.ini
+COPY conf/nginx.conf /etc/nginx/nginx.conf
+COPY conf/php-fpm.conf /etc/php/php-fpm.conf
 
-EXPOSE 80 9000
+COPY vhosts /etc/nginx/sites-enabled/
+COPY htdocs /var/www/localhost/htdocs/
 
+EXPOSE 80
 CMD ["/usr/bin/supervisord"]
